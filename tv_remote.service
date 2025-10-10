@@ -1,0 +1,12 @@
+[Unit]
+Description=TV Remote
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/martin/tv_remote
+ExecStart=/usr/bin/python3 proxy.py
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
