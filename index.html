@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TV Remote</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Numpad overlay fade animation */
+    #numpadOverlay {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease-in-out;
+    }
+    #numpadOverlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen relative">
+  <!-- Header -->
+  <header class="text-center bg-blue-600 text-white text-2xl py-4 font-bold shadow">
+    TV Remote
+  </header>
+
+  <!-- Channel Grid -->
+  <main id="channelGrid"
+        class="grid grid-cols-2 gap-4 p-4 flex-1 overflow-y-auto">
+  </main>
+
+  <!-- Numpad Overlay (Floating) -->
+  <div id="numpadOverlay" class="fixed inset-0 bg-black/60 flex flex-col justify-center items-center z-50">
+    <div id="numpadContainer" class="bg-white rounded-2xl p-6 grid grid-cols-3 gap-4 w-64 shadow-lg">
+      <!-- Buttons created dynamically via JS -->
+    </div>
+  </div>
+
+  <!-- Footer Controls -->
+  <footer class="bg-white shadow-lg border-t border-gray-200 p-4 flex justify-around items-center sticky bottom-0">
+    <button id="volumeDown" class="p-4 rounded-full bg-gray-200 hover:bg-gray-300">
+      <i data-lucide="volume-1" class="w-8 h-8"></i>
+    </button>
+    <button id="numpadToggle" class="p-4 rounded-full bg-gray-200 hover:bg-gray-300">
+      <i data-lucide="hash" class="w-8 h-8"></i>
+    </button>
+    <button id="powerOff" class="p-4 rounded-full bg-red-500 hover:bg-red-600 text-white">
+      <i data-lucide="power" class="w-8 h-8"></i>
+    </button>
+    <button id="volumeUp" class="p-4 rounded-full bg-gray-200 hover:bg-gray-300">
+      <i data-lucide="volume-2" class="w-8 h-8"></i>
+    </button>
+  </footer>
+
+  <script>
+    const BASE_URL = "/tv/1";
+
+    // --- Load channels ---
+    fetch("channels.json")
+      .then(r => r.json())
+      .then(channels => {
+        const grid = document.getElementById("channelGrid");
+        Object.entries(channels).forEach(([uuid, channel]) => {
+          const btn = document.createElement("button");
+          btn.className = "bg-white rounded-xl shadow p-4 flex flex-col justify-center items-center hover:bg-blue-100 transition h-36 w-full";
+          btn.innerHTML = `
+            <img src="${channel.icon}" alt="${channel.name}" class="w-16 h-16 object-contain mb-2" />
+            <span class="text-lg font-semibold text-center">${channel.name}</span>
+          `;
+          btn.onclick = () => changeChannel(uuid);
+          grid.appendChild(btn);
+        });
+        lucide.createIcons();
+      });
+
+    // --- Channel selection ---
+    function changeChannel(uuid) {
+      fetch(`${BASE_URL}/channels/current`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: uuid })
+      }).catch(err => console.error("Failed to change channel:", err));
+    }
+
+    // --- Generic key sender ---
+    function sendKey(key) {
+      fetch(`${BASE_URL}/input/key`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key })
+      }).catch(err => console.error("Command failed:", err));
+    }
+
+    // --- Volume and power ---
+    function changeVolume(direction) {
+      sendKey(direction === "up" ? "VolumeUp" : "VolumeDown");
+    }
+    function powerOff() {
+      sendKey("Standby");
+    }
+
+    // --- Numpad overlay creation ---
+    const numpadOverlay = document.getElementById("numpadOverlay");
+    const numpadContainer = document.getElementById("numpadContainer");
+
+    // Create digit buttons 1–9
+    for (let i = 1; i <= 9; i++) {
+      const btn = document.createElement("button");
+      btn.className = "bg-blue-100 text-2xl font-bold rounded-xl py-4 hover:bg-blue-200";
+      btn.textContent = i;
+      btn.dataset.digit = i;
+      numpadContainer.appendChild(btn);
+    }
+
+    // 0 and Close
+    const zeroBtn = document.createElement("button");
+    zeroBtn.className = "bg-blue-100 text-2xl font-bold rounded-xl py-4 hover:bg-blue-200 col-span-2";
+    zeroBtn.textContent = "0";
+    zeroBtn.dataset.digit = "0";
+    numpadContainer.appendChild(zeroBtn);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.id = "closeNumpad";
+    closeBtn.className = "bg-red-500 text-white rounded-xl py-4 hover:bg-red-600 text-xl";
+    closeBtn.textContent = "Close";
+    numpadContainer.appendChild(closeBtn);
+
+    // --- Numpad controls ---
+    const numpadToggle = document.getElementById("numpadToggle");
+    numpadToggle.onclick = () => {
+      numpadOverlay.classList.add("show");
+      numpadOverlay.classList.remove("hidden");
+    };
+
+    closeBtn.onclick = () => {
+      numpadOverlay.classList.remove("show");
+      setTimeout(() => numpadOverlay.classList.add("hidden"), 300); // wait for fade
+    };
+
+    // Handle digit buttons
+    numpadOverlay.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-digit]");
+      if (btn) {
+        const digit = btn.getAttribute("data-digit");
+        sendKey("Digit" + digit);
+      }
+    });
+
+    // --- Footer button handlers ---
+    document.getElementById("volumeUp").onclick = () => changeVolume("up");
+    document.getElementById("volumeDown").onclick = () => changeVolume("down");
+    document.getElementById("powerOff").onclick = powerOff;
+  </script>
+</body>
+</html>
