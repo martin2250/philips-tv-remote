@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 import http.server
+import os
 import socketserver
 import urllib.request
-import urllib.parse
-import sys
 
-TV_IP = "192.168.2.134"
-TV_PORT = 1925
-PORT = 8081
+TV_IP = os.environ.get("TV_IP", "192.168.2.134")
+TV_PORT = int(os.environ.get("TV_PORT", 1925))
+PORT = int(os.environ.get("PROXY_PORT", 8081))
 
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
@@ -25,7 +24,7 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
     def proxy_request(self, method):
         # Strip /tv prefix
-        target_path = self.path[len("/tv"):]
+        target_path = self.path[len("/tv") :]
         target_url = f"http://{TV_IP}:{TV_PORT}{target_path}"
 
         length = int(self.headers.get("Content-Length", 0))
