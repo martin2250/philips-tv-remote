@@ -6,7 +6,8 @@ import urllib.request
 
 TV_IP = os.environ.get("TV_IP", "192.168.2.134")
 TV_PORT = int(os.environ.get("TV_PORT", 1925))
-PORT = int(os.environ.get("PROXY_PORT", 8081))
+PROXY_IP = os.environ.get("PROXY_IP", "0.0.0.0")
+PROXY_PORT = int(os.environ.get("PROXY_PORT", 8081))
 
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
@@ -56,8 +57,8 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    with socketserver.TCPServer(("", PORT), ProxyHandler) as httpd:
-        print(f"Serving on http://localhost:{PORT}")
+    with socketserver.TCPServer((PROXY_IP, PROXY_PORT), ProxyHandler) as httpd:
+        print(f"Serving on http://{PROXY_IP}:{PROXY_PORT}")
         print(f"Proxying /tv/* → http://{TV_IP}:{TV_PORT}/")
         print("Press Ctrl+C to stop")
         try:
